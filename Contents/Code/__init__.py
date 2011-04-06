@@ -1,176 +1,135 @@
+NAMESPACES = {'pandora':'http://www.pandora.com/rss/1.0/modules/pandora/'}
+ART = 'art-default.jpg'
+ICON = 'icon-default.jpg'
+ICON_PREFS = 'icon-prefs.png'
+ICON_SEARCH = 'icon-search.png'
 
-PANDORA_PLUGIN_PREFIX = "/music/pandora"
-NAMESPACES = {'pandora':'http://www.pandora.com/rss/1.0/modules/pandora/','sy':'http://purl.org/rss/1.0/modules/syndication/','content':'http://purl.org/rss/1.0/modules/content/','dc':'http://purl.org/dc/elements/1.1/','mm':'http://musicbrainz.org/mm/mm-2.1#','fh':'http://purl.org/syndication/history/1.0','itms':'http://phobos.apple.com/rss/1.0/modules/itms/','az':'http://www.amazon.com/gp/aws/landing.html','xsi':'http://www.w3.org/2001/XMLSchema-instance'}
+FEED_URL = 'http://feeds.pandora.com/feeds/people/%s/%s.xml'
+
 ####################################################################################################
 def Start():
-  # Current artwork.jpg free for personal use only - http://squaresailor.deviantart.com/art/Apple-Desktop-52188810
-    Plugin.AddPrefixHandler(PANDORA_PLUGIN_PREFIX, MainMenu, "Pandora", "icon-default.jpg", "art-default.jpg")
-    Plugin.AddViewGroup("InfoList", viewMode="InfoList", mediaType="items")
-    Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
-    MediaContainer.art        =R("art-default.jpg")
-    DirectoryItem.thumb       =R("icon-default.jpg")
-####################################################################################################
+    # Current artwork.jpg free for personal use only - http://squaresailor.deviantart.com/art/Apple-Desktop-52188810
+    Plugin.AddPrefixHandler('/music/pandora', MainMenu, 'Pandora', ICON, ART)
+    Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
+    Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
 
-def performLogin():
-    values =  {'loginform': '',
-            'login_username': Prefs['pan_user'],
-            'login_password': Prefs['pan_pass']}
-    jsonUrl = "http://feeds.pandora.com/services/ajax/?method=authenticate.emailToWebname&email=" + Prefs['pan_user']
-    
-    headers=HTTP.Request(jsonUrl).headers
-    Log(headers)
-    dict = JSON.ObjectFromURL(jsonUrl, values=values)
-    if dict["stat"] == "ok":
-        return dict["result"]["webname"]
+    MediaContainer.title1 = 'Pandora'
+    MediaContainer.art = R(ART)
+    MediaContainer.viewGroup = 'List'
+
+    DirectoryItem.thumb = R(ICON)
+    WebVideoItem.thumb = R(ICON)
+
+    HTTP.CacheTime = CACHE_1HOUR
+    HTTP.Headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_7; en-us) AppleWebKit/533.20.25 (KHTML, like Gecko) Version/5.0.4 Safari/533.20.27'
+
+####################################################################################################  
+def WebnameFromEmail(email, authenticate=False):
+    jsonUrl = 'http://feeds.pandora.com/services/ajax/?method=authenticate.emailToWebname&email=' + email
+
+    if authenticate:
+        values = {'loginform': '',
+                  'login_username': Prefs['pan_user'],
+                  'login_password': Prefs['pan_pass']}
+        dict = JSON.ObjectFromURL(jsonUrl, values=values)
     else:
-        return "WEBNAME_LOOKUP_ERROR" #need to handle this error
+        dict = JSON.ObjectFromURL(jsonUrl)
+
+    if dict['stat'] == 'ok':
+        return dict['result']['webname']
+    else:
+        return False
+
 ####################################################################################################  
 def MainMenu():
-    
-    dir= MediaContainer(viewGroup="List")
-    useremail = Prefs['pan_user']
-    password = Prefs['pan_pass']
-    webname = pandoraWebNameFromEmail(useremail)
-    webname=performLogin()
-    Log(webname)
-    if useremail == None or password == None or webname=="WEBNAME_LOOKUP_ERROR":
-        dir.Append(PrefsItem("Set your Pandora Preferences","" , "", ""))
+    dir = MediaContainer(noCache=True)
+
+    if not Prefs['pan_user'] or not Prefs['pan_pass']:
+        dir.Append(PrefsItem(title='Set your Pandora Preferences', thumb=R(ICON_PREFS)))
+    elif not WebnameFromEmail(Prefs['pan_user']):
+        dir.Append(PrefsItem(title='Set your Pandora Preferences', thumb=R(ICON_PREFS)))
+        dir.header = "Couldn't find your account"
+        dir.message = "Please check your settings"
     else:
-        dir.Append(Function(DirectoryItem(Stations, "Your Stations", ""), webname=webname))
-        #dir.Append(Function(DirectoryItem(Friends, "Your Friends", ""), webname=webname))
-        dir.Append(Function(DirectoryItem(Bookmarks, "Your Bookmarked Songs", ""), webname=webname))
-        dir.Append(Function(DirectoryItem(BookmarkedArtists, "Your Bookmarked Artists", ""), webname=webname))
-        dir.Append(Function(InputDirectoryItem(ArtistSearch, "Search/Add Station by Artist", "Search/Add Station by Artist", thumb=R("search.jpg"))))
-        dir.Append(Function(InputDirectoryItem(EmailSearch, "Search for User Stations by Email", "Search for User Stations by Email", thumb=R("search.jpg"))))
-        dir.Append(Function(InputDirectoryItem(WebnameSearch, "Search for User Stations by ID", "Search for User Stations by Email", thumb=R("search.jpg"))))
-        
-        dir.Append(PrefsItem("Change your Pandora Preferences","" , "", ""))
-    
+        webname = WebnameFromEmail(Prefs['pan_user'], True)
+
+        dir.Append(Function(DirectoryItem(Bookmarks, title='Your Stations'), webname=webname, feed='stations'))
+        dir.Append(Function(DirectoryItem(Bookmarks, title='Your Bookmarked Songs'), webname=webname, feed='favorites'))
+        dir.Append(Function(DirectoryItem(Bookmarks, title='Your Bookmarked Artists'), webname=webname, feed='favoriteartists'))
+
+        dir.Append(Function(InputDirectoryItem(ArtistSearch, title='Search Station by Artist', prompt='Search Station by Artist', thumb=R(ICON_SEARCH))))
+        dir.Append(Function(InputDirectoryItem(EmailSearch, title='Search for User Stations by Email', prompt='Search for User Stations by Email', thumb=R(ICON_SEARCH))))
+        dir.Append(Function(InputDirectoryItem(WebnameSearch, title='Search for User Stations by ID', prompt='Search for User Stations by ID', thumb=R(ICON_SEARCH))))
+        dir.Append(PrefsItem(title='Change your Pandora Preferences', thumb=R(ICON_PREFS)))
+
     return dir
-    
- ####################################################################################################  
-def Stations(sender,webname):
-    dir= MediaContainer(viewGroup="List")
-    url='http://feeds.pandora.com/feeds/people/'+webname+'/stations.xml'
-    content=XML.ElementFromURL(url).xpath('//item',isHTML="False")
-    
-    for item in content:
-        title = item.xpath('.//title')[0].text
-        link=item.xpath('.//link')[0].text
-        desc=item.xpath('.//description')[0].text
-        thumb=item.xpath('./pandora:stationAlbumArtImageUrl',namespaces=NAMESPACES)[0].text
-        Log(thumb)
-        dir.Append(WebVideoItem(link,title=title,summary=desc,thumb=thumb))
-    return dir
-        
- ####################################################################################################  
-#def Friends(sender,webname):
-#    dir= MediaContainer(viewGroup="List")
-#   url="http://www.pandora.com/favorites/profile_tablerows_listener.vm?webname="+webname
-#    page=HTML.ElementFromURL(url,headers={'Referer':'http://www.pandora.com'})
-#    Log(page)
-#    Log(XML.StringFromElement(page))
-#    return dir
-   
- ####################################################################################################  
-def Bookmarks(sender,webname):
-    dir= MediaContainer(viewGroup="List")
-    url='http://feeds.pandora.com/feeds/people/'+webname+'/favorites.xml'
-    content=XML.ElementFromURL(url).xpath('//item',isHTML="False")
-    
-    for item in content:
-        title = item.xpath('.//title')[0].text
-        link=item.xpath('.//link')[0].text
-        desc=item.xpath('.//description')[0].text
-        thumb=item.xpath('./pandora:albumArtUrl',namespaces=NAMESPACES)[0].text
-        Log(thumb)
-        dir.Append(WebVideoItem(link,title=title,summary=desc,thumb=thumb))
-    return dir
-   
- #################################################################################################### 
-def BookmarkedArtists(sender,webname):
-    webname=webname
-    dir= MediaContainer(viewGroup="List")
-    url='http://feeds.pandora.com/feeds/people/'+webname+'/favoriteartists.xml'
-    content=XML.ElementFromURL(url).xpath('//item',isHTML="False")
-    Log(content)
-    for item in content:
-        title = item.xpath('.//title')[0].text
-        link=item.xpath('.//link')[0].text
-        desc=item.xpath('.//description')[0].text
-        thumb=item.xpath('./pandora:artistPhotoUrl',namespaces=NAMESPACES)[0].text
-        Log(thumb)
-        dir.Append(WebVideoItem(link,title=title,summary=desc,thumb=thumb))
-    return dir
+
 ####################################################################################################  
-def ArtistSearch(sender,query):
-    
-    dir= MediaContainer(viewGroup="List")
-    content=HTML.ElementFromURL("http://www.pandora.com/backstage?type=all&q="+query).xpath("//table[@id='tbl_artist_search_results']/tbody/tr")
-    Log(content)
-    for r in content:
-        thumb = r.xpath("td/a/img")[0].get("src")
-        a = r.xpath("td/a")
-        href = a[1].get("href")
-        id = "http://www.pandora.com/?search=" + href[href.rfind("/")+1:]
+def Bookmarks(sender, webname, feed):
+    dir = MediaContainer(title2=sender.itemTitle)
+    url = FEED_URL % (webname, feed)
+
+    for item in XML.ElementFromURL(url, errors='ignore').xpath('//item'):
+        title = item.xpath('./title')[0].text
+        link = item.xpath('./link')[0].text
+        desc = item.xpath('./description')[0].text
+
+        try:
+            if feed == 'stations':
+                thumb = item.xpath('./pandora:stationAlbumArtImageUrl', namespaces=NAMESPACES)[0].text
+            elif feed == 'favorites':
+                thumb = item.xpath('./pandora:albumArtUrl', namespaces=NAMESPACES)[0].text
+            elif feed == 'favoriteartists':
+                thumb = item.xpath('./pandora:artistPhotoUrl', namespaces=NAMESPACES)[0].text
+        except:
+            thumb = None
+
+        dir.Append(WebVideoItem(link, title=title, summary=desc, thumb=Function(GetThumb, url=thumb)))
+
+    return dir
+        
+####################################################################################################  
+def ArtistSearch(sender, query):
+    dir = MediaContainer(title2=sender.itemTitle)
+    content = HTML.ElementFromURL('http://www.pandora.com/backstage?type=all&q=' + query).xpath('//table[@id="tbl_artist_search_results"]/tbody/tr')
+
+    for artist in content:
+        thumb = artist.xpath('./td/a/img')[0].get('src')
+        a = artist.xpath('./td/a')
+        href = a[1].get('href')
+        url = 'http://www.pandora.com/?search=' + href[href.rfind('/')+1:]
         title = a[1].text
-        duration=""
-        dir.Append(WebVideoItem(id, title, thumb=thumb))
+        dir.Append(WebVideoItem(url, title=title, thumb=Function(GetThumb, url=thumb)))
+
     return dir
- ####################################################################################################  
-def EmailSearch(sender,query):
-    tmpwebname=pandoraWebNameFromEmail(query)
-    dir= MediaContainer(viewGroup="List")
-    if tmpwebname != "WEBNAME_LOOKUP_ERROR":
-        url="http://feeds.pandora.com/feeds/people/" + tmpwebname  + "/stations.xml"
-        content=XML.ElementFromURL(url).xpath('//item',isHTML="False")
-        for item in content:
-            title = item.xpath('.//title')[0].text
-            link=item.xpath('.//link')[0].text
-            desc=item.xpath('.//description')[0].text
-            thumb=item.xpath('./pandora:stationAlbumArtImageUrl',namespaces=NAMESPACES)[0].text
-            Log(thumb)
-            dir.Append(WebVideoItem(link,title=title,summary=desc,thumb=thumb))
+
+####################################################################################################  
+def EmailSearch(sender, query):
+    dir = MediaContainer(title2=sender.itemTitle)
+
+    if WebnameFromEmail(query):
+        dir = Bookmarks(sender, query, 'stations')
+        return dir
     else:
-        dir.Append(Function(InputDirectoryItem(EmailSearch, "Invalid Email", "Search for User Stations by Email", "search.png")))
-    return dir
- ####################################################################################################  
-def WebnameSearch(sender,query):
-    tmpwebname=query
-    dir= MediaContainer(viewGroup="List")
-    if tmpwebname != "WEBNAME_LOOKUP_ERROR":
-        url="http://feeds.pandora.com/feeds/people/" + tmpwebname  + "/stations.xml"
-        content=XML.ElementFromURL(url).xpath('//item',isHTML="False")
-        for item in content:
-            title = item.xpath('.//title')[0].text
-            link=item.xpath('.//link')[0].text
-            desc=item.xpath('.//description')[0].text
-            thumb=item.xpath('./pandora:stationAlbumArtImageUrl',namespaces=NAMESPACES)[0].text
-            Log(thumb)
-            dir.Append(WebVideoItem(link,title=title,summary=desc,thumb=thumb))
-    else:
-        dir.Append(Function(InputDirectoryItem(EmailSearch, "Invalid Email", "Search for User Stations by Email", "search.png")))
-    return dir
+        return MessageContainer('Invalid Email', 'Search for User Stations by Email')
 
- ####################################################################################################  
-def pandoraWebNameFromEmail(email):
-  jsonUrl = "http://feeds.pandora.com/services/ajax/?method=authenticate.emailToWebname&email=" + email
-  dict = JSON.ObjectFromURL(jsonUrl)
-  if dict["stat"] == "ok":
-    return dict["result"]["webname"]
-  else:
-    return "WEBNAME_LOOKUP_ERROR" #need to handle this error
+####################################################################################################  
+def WebnameSearch(sender, query):
+    dir = MediaContainer(title2=sender.itemTitle)
 
-####################################################################################################   
-def populateFromFeed(url, dir):
-  feed = RSS.Parse(url)
-  for entry in feed["items"]:
-    id = entry.link
-    title = entry.description
-    thumb = ""
-    duration = ""
-    dir.AppendItem(WebVideoItem(id, title, helptext, duration, thumb))
-  return dir
+    try:
+        dir = Bookmarks(sender, query, 'stations')
+        return dir
+    except:
+        return MessageContainer('Invalid Webname', 'Search for User Stations by Webname')
 
-####################################################################################################   
-      
+####################################################################################################  
+def GetThumb(url):
+    if url:
+        try:
+            data = HTTP.Request(url, cacheTime=CACHE_1MONTH).content
+            return DataObject(data, 'image/jpeg')
+        except:
+            pass
+
+    return Redirect(R(ICON))

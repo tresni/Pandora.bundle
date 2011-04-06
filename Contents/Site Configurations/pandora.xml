@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site site="http://www.pandora.com"
-	    plugin="https://www.pandora.com:443/radio/tuner"
-			initialState="playing"
-			version="1.0">
-			
+	plugin="https://www.pandora.com:443/radio/tuner"
+	initialState="playing"
+	version="1.0">
+
 	<crop x="203" y="117" width="406" height="196" />
-	<!--<crop x="0" y="100" width="0" height="0" /> -->
-	
+
 	<!-- PLAYING -->
 	<state name="playing">
 		<event>
@@ -37,7 +36,7 @@
 				<click x="565" y="100" />
 			</action>
 		</event>
-		
+
 		<!-- Rate track good -->
 		<event>
 			<condition>
@@ -48,7 +47,7 @@
 				<click x="580" y="300" />
 			</action>
 		</event>
-		
+
 		<!-- Rate track bad -->
 		<event>
 			<condition>
@@ -59,9 +58,8 @@
 				<click x="498" y="300" />
 			</action>
 		</event>
-		
 	</state>
-			
+
 	<!-- PAUSED -->
 	<state name="paused">
 		<event>
