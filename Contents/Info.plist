@@ -22,7 +22,7 @@
 		<string>Flash</string>
 	</array>
 	<key>PlexPluginCodePolicy</key>
-	<string>Normal</string>
+	<string>Elevated</string>
 	<key>PlexPluginConsoleLogging</key>
 	<string>0</string>
 	<key>PlexPluginDevMode</key>
