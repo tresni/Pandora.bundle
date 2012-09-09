@@ -122,7 +122,6 @@ def Station(station=None, station_id=None):
             song = pandora.get_next_song()
             try:
                 if song['adToken']:
-                    Log(song)
                     song = pandora.get_next_song()
             except:
                 pass
