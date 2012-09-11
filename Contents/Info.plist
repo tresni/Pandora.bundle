@@ -4,28 +4,12 @@
 <dict>
 	<key>CFBundleIdentifier</key>
 	<string>com.plexapp.plugins.pandora</string>
-	<key>PlexClientCapabilities</key>
-	<dict>
-		<key>protocols</key>
-		<array>
-			<string>webkit</string>
-		</array>
-	</dict>
-	<key>PlexClientPlatformExclusions</key>
-	<string>Roku</string>
 	<key>PlexClientPlatforms</key>
 	<string>*</string>
 	<key>PlexFrameworkVersion</key>
 	<string>2</string>
 	<key>PlexMediaContainer</key>
-	<array>
-		<string>Flash</string>
-	</array>
 	<key>PlexPluginCodePolicy</key>
-	<string>Normal</string>
-	<key>PlexPluginConsoleLogging</key>
-	<string>0</string>
-	<key>PlexPluginDevMode</key>
-	<string>0</string>
+	<string>Elevated</string>
 </dict>
 </plist>
