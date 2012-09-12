@@ -35,6 +35,7 @@ def MainMenu():
     
     if not Prefs['pan_user'] or not Prefs['pan_pass']:
         oc.add(PrefsObject(title='Set your Pandora Preferences', thumb=R(ICON_PREFS)))
+        return oc
     elif 'authed' in Dict['PandoraConnection']:
         if Dict['PandoraConnection']['authed']:
             authed = Dict['PandoraConnection']['authed']
