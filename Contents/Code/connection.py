@@ -27,7 +27,7 @@ class PandoraConnection(object):
 		self.timedelta = 0
 		
 	def authenticate(self, user, pwd):
-		try:
+		#try:
 			# partner login
 			partner = self.do_request(
 				'auth.partnerLogin',
@@ -52,15 +52,15 @@ class PandoraConnection(object):
 			self.premium_account = not user['hasAudioAds']
 			
 			return True
-		except:
-			self.partner_id = None
-			self.partner_auth_token = None
-			self.user_id = None
-			self.user_auth_token = None
-			self.time_offset = None
-			self.premium_account = None
-			
-			return False
+		#except:
+		#	self.partner_id = None
+		#	self.partner_auth_token = None
+		#	self.user_id = None
+		#	self.user_auth_token = None
+		#	self.time_offset = None
+		#	self.premium_account = None
+		#	
+		#	return False
 	
 	def get_stations(self):
 		return self.do_request('user.getStationList', False, True)['stations']
