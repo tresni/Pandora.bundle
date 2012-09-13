@@ -54,8 +54,13 @@ def MainMenu():
 ####################################################################################################
 def Pandora_Authenticate():
     
-    pandora = Pandora()
-    authed = pandora.authenticate(Prefs['pan_user'], Prefs['pan_pass'])
+    try:
+        pandora = PandoraObject()
+        authed = pandora.authenticated
+    except:
+        pandora = Pandora()
+        authed = pandora.authenticate(Prefs['pan_user'], Prefs['pan_pass'])
+        
     
     if authed:
         Dict['PandoraConnection']['authed'] = True
