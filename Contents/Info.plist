@@ -8,7 +8,6 @@
 	<string>*</string>
 	<key>PlexFrameworkVersion</key>
 	<string>2</string>
-	<key>PlexMediaContainer</key>
 	<key>PlexPluginCodePolicy</key>
 	<string>Elevated</string>
 </dict>
