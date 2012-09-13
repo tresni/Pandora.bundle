@@ -58,7 +58,7 @@ def Pandora_Authenticate():
     authed = pandora.authenticate(Prefs['pan_user'], Prefs['pan_pass'])
     
     if authed:
-        Dict['PandoraConnection']['authed'] = pandora.authenticated
+        Dict['PandoraConnection']['authed'] = True
         Dict['PandoraConnection']['partner_id'] = pandora.connection.partner_id
         Dict['PandoraConnection']['partner_auth_token'] = pandora.connection.partner_auth_token
         Dict['PandoraConnection']['user_id'] = pandora.connection.user_id
