@@ -12,7 +12,7 @@ class PandoraConnection(object):
 	user_auth_token = None
 	premium_account = None
 	
-	time_offset = None
+	time_offset = 0
 	
 	PROTOCOL_VERSION = 'NQ__'
 	RPC_URL = "Oi8vdHVuZXIucGFuZG9yYS5jb20vc2VydmljZXMvanNvbi8@"
@@ -24,7 +24,6 @@ class PandoraConnection(object):
 	
 	def __init__(self):
 		self.rid = "%07i" % (Datetime.TimestampFromDatetime(Datetime.Now()) % 1e7)
-		self.timedelta = 0
 		
 	def authenticate(self, user, pwd):
 		#try:
@@ -90,8 +89,7 @@ class PandoraConnection(object):
 		url_arg_strings.append('method=%s'%method)
 		url = ('https' if secure else 'http') + String.Decode(self.RPC_URL) + '&'.join(url_arg_strings)
 		
-		if self.time_offset:
-			kwargs['syncTime'] = int(Datetime.TimestampFromDatetime(Datetime.Now())+self.time_offset)
+		kwargs['syncTime'] = int(Datetime.TimestampFromDatetime(Datetime.Now())+self.time_offset)
 		if self.user_auth_token:
 			kwargs['userAuthToken'] = self.user_auth_token
 		elif self.partner_auth_token:
