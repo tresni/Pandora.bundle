@@ -123,7 +123,7 @@ def Station(station=None, station_id=None):
                     song = pandora.get_next_song()
             except:
                 pass
-            
+
             track = GetTrack(song)
             oc.add(track)
         
@@ -134,7 +134,27 @@ def Station(station=None, station_id=None):
 
 ####################################################################################################
 def GetTrack(song):
-    
+
+    items = []
+    for quality in song['audioUrlMap']:
+        
+        encoding = song['audioUrlMap'][quality]['encoding']
+        if 'aac' in encoding:
+            container = Container.MP4
+            audio_codec = AudioCodec.AAC
+            ext = 'aac'
+        else:
+            container = Container.MP3
+            audio_codec = AudioCodec.MP3
+            ext = 'mp3'
+        items.append(MediaObject(
+            parts = [PartObject(key=Callback(PlayAudio, url=song['audioUrlMap'][quality]['audioUrl'], ext=ext, quality=quality))],
+            container = container,
+            bitrate = song['audioUrlMap'][quality]['bitrate'],
+            audio_codec = audio_codec,
+            audio_channels = 2
+        ))
+        
     track = TrackObject(
         key=song['songDetailUrl'],
         rating_key=song['songDetailUrl'],
@@ -142,53 +162,12 @@ def GetTrack(song):
         album=song['albumName'],
         artist = song['artistName'],
         thumb = song['albumArtUrl'],
-        items = [
-            MediaObject(
-                parts = [PartObject(key=Callback(PlayAudio, song=song, ext='mp3', quality='mp3'))],
-                container = Container.MP3,
-                bitrate = 128,
-                audio_codec = AudioCodec.MP3,
-                audio_channels = 2
-            ),
-            MediaObject(
-                parts = [PartObject(key=Callback(PlayAudio, song=song, ext='aac', quality='highQuality'))],
-                container = Container.MP4,
-                bitrate = 64,
-                audio_codec = AudioCodec.AAC,
-                audio_channels = 2
-            ),
-            MediaObject(
-                parts = [PartObject(key=Callback(PlayAudio, song=song, ext='aac', quality='mediumQuality'))],
-                container = Container.MP4,
-                bitrate = 64,
-                audio_codec = AudioCodec.AAC,
-                audio_channels = 2
-            ),
-            MediaObject(
-                parts = [PartObject(key=Callback(PlayAudio, song=song, ext='aac', quality='lowQuality'))],
-                container = Container.MP4,
-                bitrate = 32,
-                audio_codec = AudioCodec.AAC,
-                audio_channels = 2
-            )
-        ]
+        items = items
     )
     return track
 
 ####################################################################################################
-def PlayAudio(song, quality):
-    QUALITY_MAP = ['lowQuality', 'mediumQuality', 'highQuality']
-    
-    if quality == 'mp3':
-        return Redirect(song['additionalAudioUrl'])
-    
-    index = QUALITY_MAP.index(quality)
-    while index > -1:
-        try:
-            song_url = song['audioUrlMap'][QUALITY_MAP[index]]['audioUrl']
-            break
-        except:
-            index = index - 1
-    return Redirect(song_url)
+def PlayAudio(url='', ext='', quality=''):
+    return Redirect(url)
 
 ####################################################################################################
