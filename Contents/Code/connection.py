@@ -142,22 +142,24 @@ class PandoraConnection(object):
 			data = blowfish.pandora_encrypt(String.Decode(self.ENCRYPT_KEY), data)
 
 		# execute request
-		text = HTTP.Request(url, data=data, headers={'User-agent': "02strich", 'Content-type': 'text/plain'}).content
-		#text = HTTP.Request(url, data=data, headers={'Content-type': 'text/plain'}).content
-
-		#Log ('response data --> ' + text)
-
-		# parse result
-		tree = JSON.ObjectFromString(text)
-		if tree['stat'] == 'fail':
-			code = tree['code']
-			msg = tree['message']
-			if code == 1002:
-				raise AuthenticationError()
-			else:
-				raise ValueError("%d: %s" % (code, msg))
-		elif 'result' in tree:
-			return tree['result']
+		text = HTTP.Request(url, data=data, headers={'User-agent': "02strich", 'Content-type': 'text/plain'}, cache_time=0).content
+		
+		retry = 0
+		while retry < 3:
+			# parse result
+			tree = JSON.ObjectFromString(text)
+			if tree['stat'] == 'fail':
+				code = tree['code']
+				msg = tree['message']
+				if code == 1002:
+					raise AuthenticationError()
+				elif code == 0:
+					# retry the request
+					text = HTTP.Request(url, data=data, headers={'User-agent': "02strich", 'Content-type': 'text/plain'}, cache_time=0).content
+				else:
+					raise ValueError("%d: %s" % (code, msg))
+			elif 'result' in tree:
+				return tree['result']
 
 
 
