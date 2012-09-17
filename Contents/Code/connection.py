@@ -54,7 +54,7 @@ class PandoraConnection(object):
 		except:
 			pass
 		
-		if self.partner_auth_token is not None and self.user_auth_token is not None:
+		if self.partner_auth_token is not None and self.user_auth_token is not None and self.premium_account:
 			return True
 		else:
 			return False
