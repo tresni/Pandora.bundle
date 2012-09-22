@@ -5,6 +5,7 @@ ART = 'art-default.jpg'
 ICON = 'icon-default.jpg'
 ICON_PREFS = 'icon-prefs.png'
 ICON_SEARCH = 'icon-search.png'
+PLAYLIST_LENGTH = 15
 
 FEED_URL = 'http://feeds.pandora.com/feeds/people/%s/%s.xml?max=%s'
 
@@ -51,9 +52,13 @@ def StationList():
         return ObjectContainer(header="Pandora Error",
                  message="Unable to log in.  Please check your settings.  The Pandora channel requires a paid Pandora One account."
                )
-    
+
     oc = ObjectContainer(no_cache=True)
     stations = pandora.get_station_list()
+
+    if Prefs['station_sort_order'] == 'Alphabetical':
+        stations = sorted(stations, key=lambda k: k['stationName'])
+
     for station in stations:
         oc.add(DirectoryObject(key=Callback(Station, station=station), title = station['stationName']))
     
@@ -74,7 +79,7 @@ def Station(station=None, station_id=None):
                  message="Unable to switch station.  Hourly limit reached.  Try again in a few minutes."
                )
 
-    while len(oc) < int(Prefs['playlist_length']):
+    while len(oc) < PLAYLIST_LENGTH:
         try:
             song = pandora.get_next_song()
             track = GetTrack(song)

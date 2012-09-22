@@ -13,10 +13,10 @@
       "option": "hidden" 
   },
   {
-        "id": "playlist_length",
+        "id": "station_sort_order",
         "type": "enum",
-        "label": "Playlist Length",
-        "values": ["10","15","25"],
-        "default": "15"
+        "label": "Station Sort Order",
+        "values": ["Alphabetical","By Date Added"],
+        "default": "Alphabetical"
   }
 ]
