@@ -5,7 +5,9 @@ ART = 'art-default.jpg'
 ICON = 'icon-default.jpg'
 ICON_PREFS = 'icon-prefs.png'
 ICON_SEARCH = 'icon-search.png'
+
 PLAYLIST_LENGTH = 15
+PLAYLIST_RESET_INTERVAL = 600
 
 FEED_URL = 'http://feeds.pandora.com/feeds/people/%s/%s.xml?max=%s'
 
@@ -20,6 +22,13 @@ def Start():
     DirectoryObject.thumb = R(ICON)
     
     HTTP.CacheTime = 0
+
+    if 'PandoraPlaylist' not in Dict:
+        Dict['PandoraPlaylist'] = {}
+
+    Dict['PandoraPlaylist']['station_id'] = ''
+    Dict['PandoraPlaylist']['timestamp'] = 0
+
         
 ####################################################################################################     
 def MainMenu():
@@ -30,6 +39,7 @@ def MainMenu():
         return oc
     else:
         oc.add(DirectoryObject(key=Callback(StationList), title='Your Stations'))
+        oc.add(DirectoryObject(key=Callback(ManageStations), title='Manage Stations'))
         oc.add(PrefsObject(title='Change your Pandora Preferences', thumb=R(ICON_PREFS)))
 
     return oc
@@ -45,7 +55,7 @@ def PandoraObject():
         return None
 
 ####################################################################################################
-def StationList():
+def StationList(action='play'):
     
     pandora = PandoraObject()
     if pandora is None:
@@ -60,9 +70,57 @@ def StationList():
         stations = sorted(stations, key=lambda k: k['stationName'])
 
     for station in stations:
-        oc.add(DirectoryObject(key=Callback(Station, station=station), title = station['stationName']))
+        if action == 'play':
+            oc.add(DirectoryObject(key=Callback(Station, station=station), title = station['stationName']))
+        elif action == 'delete':
+            oc.add(DirectoryObject(key=Callback(DeleteStation, station=station), title = station['stationName']))
     
     return oc
+
+####################################################################################################
+def ManageStations():
+    
+    oc = ObjectContainer()
+
+    oc.add(InputDirectoryObject(key=Callback(SearchStations), title="Add Station...", prompt="Search Pandora"))
+    oc.add(DirectoryObject(key=Callback(StationList, action='delete'), title="Remove Stations"))
+    
+    return oc
+
+####################################################################################################
+def SearchStations(query):
+    
+    pandora = PandoraObject()
+    results = pandora.music_search(query)
+    matches = results['artists'] + results['songs']
+
+    oc = ObjectContainer()
+    for match in matches:
+        title = match['artistName']
+        try:
+            title = title + ' - ' + match['songName']
+        except:
+            pass
+
+        oc.add(DirectoryObject(key=Callback(CreateStation, music_token=match['musicToken']), title=title))
+
+    return oc
+
+####################################################################################################
+def CreateStation(music_token):
+
+    pandora = PandoraObject()
+    pandora.create_station(music_token)
+    
+    return StationList(action='play')
+
+####################################################################################################
+def DeleteStation(station):
+    
+    pandora = PandoraObject()
+    pandora.delete_station(station['stationToken'])
+
+    return StationList(action='delete')
 
 ####################################################################################################
 def Station(station=None, station_id=None):
@@ -71,23 +129,38 @@ def Station(station=None, station_id=None):
     station_id = station['stationToken']
     oc = ObjectContainer(title2=title2, no_cache=True)
     pandora = PandoraObject()
-    
-    try:
-        pandora.switch_station(station_id)
-    except:
-        return ObjectContainer(header="Pandora Error",
-                 message="Unable to switch station.  Hourly limit reached.  Try again in a few minutes."
-               )
 
-    while len(oc) < PLAYLIST_LENGTH:
-        try:
-            song = pandora.get_next_song()
-            track = GetTrack(song)
-            oc.add(track)
-        except:
-            Log('Unable to add track.')
-            break            
+    if Dict['PandoraPlaylist']['timestamp'] + PLAYLIST_RESET_INTERVAL < int(Datetime.TimestampFromDatetime(Datetime.Now())):
+        playlist_stale = True
+    else:
+        playlist_stale = False
     
+    if Dict['PandoraPlaylist']['station_id'] != station_id or playlist_stale:
+        try:
+            pandora.switch_station(station_id)
+            Dict['PandoraPlaylist']['station_id'] = station_id
+            Dict['PandoraPlaylist']['timestamp'] = 0
+            Dict['PandoraPlaylist']['playlist'] = []
+        except:
+            return ObjectContainer(header="Pandora Error",
+                     message="Unable to switch station.  Hourly limit reached.  Try again in a few minutes."
+                   )
+    
+    if playlist_stale:
+        Dict['PandoraPlaylist']['playlist'] = []
+        Dict['PandoraPlaylist']['timestamp'] = int(Datetime.TimestampFromDatetime(Datetime.Now()))
+        
+        while len(Dict['PandoraPlaylist']['playlist']) < PLAYLIST_LENGTH:
+            try:
+                Dict['PandoraPlaylist']['playlist'].append(pandora.get_next_song())
+            except:
+                Log('Unable to add track.')
+                break
+
+    for song in Dict['PandoraPlaylist']['playlist']:
+        track = GetTrack(song)
+        oc.add(track)
+        
     return oc
 
 ####################################################################################################
@@ -114,7 +187,7 @@ def GetTrack(song):
         ))
         
     track = TrackObject(
-        key=song['songDetailUrl'],
+        key=Callback(GetTrack, song=song),
         rating_key=song['songDetailUrl'],
         title = song['songName'],
         album=song['albumName'],

@@ -14,7 +14,7 @@ class Pandora(object):
 	
 	def get_station_list(self):
 		return self.connection.get_stations()
-	
+
 	def switch_station(self, station_id):
 		if type(station_id) is dict:
 			station_id = station_id['stationId']
@@ -35,3 +35,14 @@ class Pandora(object):
 		
 		# get next song
 		return self.backlog.pop()
+
+	def music_search(self, query):
+		return self.connection.music_search(query)
+	
+	def create_station(self, music_token):
+		return self.connection.create_station(music_token)
+	
+	def delete_station(self, station_token):
+		return self.connection.delete_station(station_token)
+	
+	

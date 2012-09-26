@@ -1,4 +1,3 @@
-import random
 import blowfish
 
 class AuthenticationError(Exception):
@@ -65,6 +64,15 @@ class PandoraConnection(object):
 	def get_fragment(self, stationId=None):
 		return self.do_request('station.getPlaylist', True, True, stationToken=stationId)['items']
 	
+	def music_search(self, query):
+		return self.do_request('music.search', False, True, searchText=query)
+	
+	def create_station(self, music_token):
+		return self.do_request('station.createStation', False, True, musicToken=music_token)
+	
+	def delete_station(self, station_token):
+		return self.do_request('station.deleteStation', False, True, stationToken=station_token)
+
 	def do_request(self, method, secure, crypted, **kwargs):
 		url_arg_strings = []
 		if self.partner_id:
