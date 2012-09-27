@@ -25,6 +25,9 @@ class Pandora(object):
 		self.station_id = station_id
 		self.backlog = self.connection.get_fragment(station_id) + self.backlog
 	
+	def set_station(self, station_id):
+		self.station_id = station_id
+
 	def get_next_song(self):
 		if not self.authenticated: raise ValueError("User not yet authenticated")
 		if not self.station_id: raise ValueError("No station selected")

@@ -73,7 +73,7 @@ def StationList(action='play'):
         if action == 'play':
             oc.add(DirectoryObject(key=Callback(Station, station=station), title = station['stationName']))
         elif action == 'delete':
-            oc.add(DirectoryObject(key=Callback(DeleteStation, station=station), title = station['stationName']))
+            oc.add(PopupDirectoryObject(key=Callback(ConfirmDelete, station=station, station_name=station['stationName']), title = station['stationName']))
     
     return oc
 
@@ -115,6 +115,15 @@ def CreateStation(music_token):
     return StationList(action='play')
 
 ####################################################################################################
+def ConfirmDelete(station, station_name):
+    
+    oc = ObjectContainer()
+    oc.add(DirectoryObject(key=Callback(DeleteStation, station=station), title='Delete ' + station_name))
+    oc.add(DirectoryObject(key=Callback(StationList, action='delete'), title='Cancel'))
+    
+    return oc
+
+####################################################################################################
 def DeleteStation(station):
     
     pandora = PandoraObject()
@@ -145,22 +154,24 @@ def Station(station=None, station_id=None):
             return ObjectContainer(header="Pandora Error",
                      message="Unable to switch station.  Hourly limit reached.  Try again in a few minutes."
                    )
-    
+    else:
+        pandora.set_station(station_id)
+
     if playlist_stale:
         Dict['PandoraPlaylist']['playlist'] = []
         Dict['PandoraPlaylist']['timestamp'] = int(Datetime.TimestampFromDatetime(Datetime.Now()))
         
-        while len(Dict['PandoraPlaylist']['playlist']) < PLAYLIST_LENGTH:
-            try:
-                Dict['PandoraPlaylist']['playlist'].append(pandora.get_next_song())
-            except:
-                Log('Unable to add track.')
-                break
+    while len(Dict['PandoraPlaylist']['playlist']) < PLAYLIST_LENGTH:
+        try:
+            Dict['PandoraPlaylist']['playlist'].append(pandora.get_next_song())
+        except:
+            Log('Unable to add track.')
+            break
 
     for song in Dict['PandoraPlaylist']['playlist']:
         track = GetTrack(song)
         oc.add(track)
-        
+
     return oc
 
 ####################################################################################################
@@ -179,7 +190,7 @@ def GetTrack(song):
             audio_codec = AudioCodec.MP3
             ext = 'mp3'
         items.append(MediaObject(
-            parts = [PartObject(key=Callback(PlayAudio, url=song['audioUrlMap'][quality]['audioUrl'], ext=ext, quality=quality))],
+            parts = [PartObject(key=Callback(PlayAudio, url=song['audioUrlMap'][quality]['audioUrl'], ext=ext, quality=quality, song=song))],
             container = container,
             bitrate = song['audioUrlMap'][quality]['bitrate'],
             audio_codec = audio_codec,
@@ -198,7 +209,8 @@ def GetTrack(song):
     return track
 
 ####################################################################################################
-def PlayAudio(url='', ext='', quality=''):
+def PlayAudio(url='', ext='', quality='', song=None):
+    Dict['PandoraPlaylist']['playlist'].remove(song)
     return Redirect(url)
 
 ####################################################################################################
