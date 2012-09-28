@@ -140,17 +140,10 @@ def Station(station=None, station_id=None):
     pandora = PandoraObject()
     playlist_stale = False
 
-    Log('Dict timestamp: ' + str(Dict['PandoraPlaylist']['timestamp']))
-    Log('Now: ' + str(int(Datetime.TimestampFromDatetime(Datetime.Now()))))
-
     if Dict['PandoraPlaylist']['timestamp'] + PLAYLIST_RESET_INTERVAL < int(Datetime.TimestampFromDatetime(Datetime.Now())):
         playlist_stale = True
     
-    Log('Dict station_id: ' + Dict['PandoraPlaylist']['station_id'])
-    Log('requested station_id: ' + station_id)
-
     if Dict['PandoraPlaylist']['station_id'] != station_id or playlist_stale:
-        Log('Rebuilding playlist due to timeout... playlist_stale: ' + str(playlist_stale))
         try:
             pandora.switch_station(station_id)
             Dict['PandoraPlaylist']['station_id'] = station_id
