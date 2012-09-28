@@ -6,7 +6,7 @@ ICON = 'icon-default.jpg'
 ICON_PREFS = 'icon-prefs.png'
 ICON_SEARCH = 'icon-search.png'
 
-PLAYLIST_LENGTH = 15
+PLAYLIST_LENGTH = 12
 PLAYLIST_RESET_INTERVAL = 600
 
 FEED_URL = 'http://feeds.pandora.com/feeds/people/%s/%s.xml?max=%s'
@@ -138,32 +138,35 @@ def Station(station=None, station_id=None):
     station_id = station['stationToken']
     oc = ObjectContainer(title2=title2, no_cache=True)
     pandora = PandoraObject()
+    playlist_stale = False
+
+    Log('Dict timestamp: ' + str(Dict['PandoraPlaylist']['timestamp']))
+    Log('Now: ' + str(int(Datetime.TimestampFromDatetime(Datetime.Now()))))
 
     if Dict['PandoraPlaylist']['timestamp'] + PLAYLIST_RESET_INTERVAL < int(Datetime.TimestampFromDatetime(Datetime.Now())):
         playlist_stale = True
-    else:
-        playlist_stale = False
     
+    Log('Dict station_id: ' + Dict['PandoraPlaylist']['station_id'])
+    Log('requested station_id: ' + station_id)
+
     if Dict['PandoraPlaylist']['station_id'] != station_id or playlist_stale:
+        Log('Rebuilding playlist due to timeout... playlist_stale: ' + str(playlist_stale))
         try:
             pandora.switch_station(station_id)
             Dict['PandoraPlaylist']['station_id'] = station_id
-            Dict['PandoraPlaylist']['timestamp'] = 0
+            Dict['PandoraPlaylist']['timestamp'] = int(Datetime.TimestampFromDatetime(Datetime.Now()))
             Dict['PandoraPlaylist']['playlist'] = []
         except:
             return ObjectContainer(header="Pandora Error",
                      message="Unable to switch station.  Hourly limit reached.  Try again in a few minutes."
                    )
     else:
-        pandora.set_station(station_id)
-
-    if playlist_stale:
-        Dict['PandoraPlaylist']['playlist'] = []
-        Dict['PandoraPlaylist']['timestamp'] = int(Datetime.TimestampFromDatetime(Datetime.Now()))
+        pandora.set_station(station_id)    
         
     while len(Dict['PandoraPlaylist']['playlist']) < PLAYLIST_LENGTH:
         try:
             Dict['PandoraPlaylist']['playlist'].append(pandora.get_next_song())
+            Dict['PandoraPlaylist']['timestamp'] = int(Datetime.TimestampFromDatetime(Datetime.Now()))
         except:
             Log('Unable to add track.')
             break
@@ -210,7 +213,10 @@ def GetTrack(song):
 
 ####################################################################################################
 def PlayAudio(url='', ext='', quality='', song=None):
-    Dict['PandoraPlaylist']['playlist'].remove(song)
+    try:
+        Dict['PandoraPlaylist']['playlist'].remove(song)
+    except:
+        pass
     return Redirect(url)
 
 ####################################################################################################
