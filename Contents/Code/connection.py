@@ -1,4 +1,4 @@
-import crypt
+import blowfish
 
 class AuthenticationError(Exception):
 	"""Raised when an operation encountered authentication issues."""
@@ -12,23 +12,23 @@ class PandoraConnection(object):
 	user_auth_token = None
 	premium_account = None
 	
-	time_offset = None
+	time_offset = 0
 	
 	PROTOCOL_VERSION = 'NQ__'
-	RPC_URL = "Oi8vdHVuZXIucGFuZG9yYS5jb20vc2VydmljZXMvanNvbi8@"
-	DEVICE_MODEL = "YW5kcm9pZC1nZW5lcmlj"
-	PARTNER_USERNAME = 'YW5kcm9pZA__'
-	PARTNER_PASSWORD = 'QUM3SUJHMDlBM0RUU1lNNFI0MVVKV0wwN1ZMTjhKSTc_'
-	AUDIO_FORMAT_MAP = {'aac': 'HTTP_64_AACPLUS_ADTS',
-						'mp3': 'HTTP_128_MP3'}
-	
+	RPC_URL = 'Oi8vaW50ZXJuYWwtdHVuZXIucGFuZG9yYS5jb20vc2VydmljZXMvanNvbi8@'
+	DEVICE_MODEL = 'RDAx'
+	PARTNER_USERNAME = 'cGFuZG9yYSBvbmU_'
+	PARTNER_PASSWORD = 'VFZDS0lCR1M5QU85VFNZTE5ORlVNTDA3NDNMSDgyRA__'
+	ENCRYPT_KEY = 'MiUzV0NMKkpVJE1QXTQ_'
+	DECRYPT_KEY = 'VSNJTyRSWlBBQiVWWDI_'
+
 	def __init__(self):
-		self.rid = "%07i" % (Datetime.TimestampFromDatetime(Datetime.Now()) % 1e7)
-		self.timedelta = 0
+		pass
 		
 	def authenticate(self, user, pwd):
+		
+		# partner login
 		try:
-			# partner login
 			partner = self.do_request(
 				'auth.partnerLogin',
 				True,
@@ -42,7 +42,7 @@ class PandoraConnection(object):
 			self.partner_auth_token = partner['partnerAuthToken']
 			
 			# sync
-			pandora_time = int(crypt.pandora_decrypt(partner['syncTime'])[4:14])
+			pandora_time = int(blowfish.pandora_decrypt(String.Decode(self.DECRYPT_KEY), partner['syncTime'])[4:14])
 			self.time_offset = pandora_time - Datetime.TimestampFromDatetime(Datetime.Now())
 			
 			# user login
@@ -50,32 +50,29 @@ class PandoraConnection(object):
 			self.user_id = user['userId']
 			self.user_auth_token = user['userAuthToken']
 			self.premium_account = not user['hasAudioAds']
-			
-			return True
 		except:
-			self.partner_id = None
-			self.partner_auth_token = None
-			self.user_id = None
-			self.user_auth_token = None
-			self.time_offset = None
-			self.premium_account = None
-			
+			pass
+		
+		if self.partner_auth_token is not None and self.user_auth_token is not None and self.premium_account:
+			return True
+		else:
 			return False
 	
 	def get_stations(self):
 		return self.do_request('user.getStationList', False, True)['stations']
 	
-	def get_listener(self):
-		return self.do_request('user.getStationList', False, True)['stations']
+	def get_fragment(self, stationId=None):
+		return self.do_request('station.getPlaylist', True, True, stationToken=stationId)['items']
 	
-	def get_fragment(self, stationId=None, additional_format="mp3"):
-		songlist = self.do_request('station.getPlaylist', True, True, stationToken=stationId, additionalAudioUrl=self.AUDIO_FORMAT_MAP[additional_format])['items']
-				
-		self.curStation = stationId
-		#self.curFormat = format
-		
-		return songlist
+	def music_search(self, query):
+		return self.do_request('music.search', False, True, searchText=query)
 	
+	def create_station(self, music_token):
+		return self.do_request('station.createStation', False, True, musicToken=music_token)
+	
+	def delete_station(self, station_token):
+		return self.do_request('station.deleteStation', False, True, stationToken=station_token)
+
 	def do_request(self, method, secure, crypted, **kwargs):
 		url_arg_strings = []
 		if self.partner_id:
@@ -87,32 +84,31 @@ class PandoraConnection(object):
 		elif self.partner_auth_token:
 			url_arg_strings.append('auth_token=%s' % String.Quote(self.partner_auth_token, usePlus=True))
 		
-		url_arg_strings.append('method=%s'%method)
+		url_arg_strings.append('method=%s' % method)
 		url = ('https' if secure else 'http') + String.Decode(self.RPC_URL) + '&'.join(url_arg_strings)
-		
-		if self.time_offset:
-			kwargs['syncTime'] = int(Datetime.TimestampFromDatetime(Datetime.Now())+self.time_offset)
+				
+		kwargs['syncTime'] = int(Datetime.TimestampFromDatetime(Datetime.Now())+self.time_offset)
 		if self.user_auth_token:
 			kwargs['userAuthToken'] = self.user_auth_token
 		elif self.partner_auth_token:
 			kwargs['partnerAuthToken'] = self.partner_auth_token
 		data = JSON.StringFromObject(kwargs)
+		#Log ('request data --> ' + data)
 		
 		if crypted:
-			data = crypt.pandora_encrypt(data)
+			data = blowfish.pandora_encrypt(String.Decode(self.ENCRYPT_KEY), data)
 
 		# execute request
-		text = HTTP.Request(url, data=data, headers={'User-agent': "02strich", 'Content-type': 'text/plain'}).content
+		text = HTTP.Request(url, data=data, headers={'Content-type': 'text/plain'}, cacheTime=0).content
+		#Log ('response data --> ' + text)
 
-		# parse result
 		tree = JSON.ObjectFromString(text)
 		if tree['stat'] == 'fail':
-			code = tree['code']
-			msg = tree['message']
-			if code == 1002:
-				raise AuthenticationError()
-			else:
-				raise ValueError("%d: %s" % (code, msg))
+			raise RuntimeError("%d: %s" % (tree['code'], tree['message']))
+			return tree['result']
 		elif 'result' in tree:
 			return tree['result']
+
+
+
 			

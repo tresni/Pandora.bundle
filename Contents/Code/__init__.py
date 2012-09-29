@@ -6,6 +6,9 @@ ICON = 'icon-default.jpg'
 ICON_PREFS = 'icon-prefs.png'
 ICON_SEARCH = 'icon-search.png'
 
+PLAYLIST_LENGTH = 12
+PLAYLIST_RESET_INTERVAL = 600
+
 FEED_URL = 'http://feeds.pandora.com/feeds/people/%s/%s.xml?max=%s'
 
 ####################################################################################################
@@ -19,171 +22,194 @@ def Start():
     DirectoryObject.thumb = R(ICON)
     
     HTTP.CacheTime = 0
-    
-####################################################################################################
-def ValidatePrefs():
-    return
-    
+
+    if 'PandoraPlaylist' not in Dict:
+        Dict['PandoraPlaylist'] = {}
+
+    Dict['PandoraPlaylist']['station_id'] = ''
+    Dict['PandoraPlaylist']['timestamp'] = 0
+
+        
 ####################################################################################################     
 def MainMenu():
+
     oc = ObjectContainer(no_cache=True)
-    
-    if 'PandoraConnection' not in Dict:
-        Dict['PandoraConnection'] = {}
-    
     if not Prefs['pan_user'] or not Prefs['pan_pass']:
         oc.add(PrefsObject(title='Set your Pandora Preferences', thumb=R(ICON_PREFS)))
         return oc
-    elif 'authed' in Dict['PandoraConnection']:
-        if Dict['PandoraConnection']['authed']:
-            authed = Dict['PandoraConnection']['authed']
-        else:
-            authed = Pandora_Authenticate()
-    else :
-        authed = Pandora_Authenticate()
-    
-    if not authed:
-        oc.add(PrefsObject(title='Set your Pandora Preferences', summary='Unable to log in. Please check your settings.', thumb=R(ICON_PREFS)))
-    elif not Dict['PandoraConnection']['premium_account']:
-        oc.add(PrefsObject(title='Enter Pandora Premium membership details', sumamry='The Pandora channel requires a paid subscription to Pandora.', thumb=R(ICON_PREFS)))
     else:
         oc.add(DirectoryObject(key=Callback(StationList), title='Your Stations'))
+        oc.add(DirectoryObject(key=Callback(ManageStations), title='Manage Stations'))
         oc.add(PrefsObject(title='Change your Pandora Preferences', thumb=R(ICON_PREFS)))
-    return oc
 
-####################################################################################################
-def Pandora_Authenticate():
-    
-    pandora = Pandora()
-    authed = pandora.authenticate(Prefs['pan_user'], Prefs['pan_pass'])
-    
-    if authed:
-        Dict['PandoraConnection']['authed'] = pandora.authenticated
-        Dict['PandoraConnection']['partner_id'] = pandora.connection.partner_id
-        Dict['PandoraConnection']['partner_auth_token'] = pandora.connection.partner_auth_token
-        Dict['PandoraConnection']['user_id'] = pandora.connection.user_id
-        Dict['PandoraConnection']['user_auth_token'] = pandora.connection.user_auth_token
-        Dict['PandoraConnection']['time_offset'] = pandora.connection.time_offset
-        Dict['PandoraConnection']['premium_account'] = pandora.connection.premium_account
-        return True
-    else:
-        Dict['PandoraConnection']['authed'] = False
-        return False
+    return oc
 
 ####################################################################################################
 def PandoraObject():
     
     pandora = Pandora()
-    
-    pandora.authenticated = Dict['PandoraConnection']['authed']
-    pandora.connection.partner_id = Dict['PandoraConnection']['partner_id']
-    pandora.connection.partner_auth_token = Dict['PandoraConnection']['partner_auth_token']
-    pandora.connection.user_id = Dict['PandoraConnection']['user_id']
-    pandora.connection.user_auth_token = Dict['PandoraConnection']['user_auth_token']
-    pandora.connection.time_offset = Dict['PandoraConnection']['time_offset']
-    pandora.connection.premium_account = Dict['PandoraConnection']['premium_account']
-    
-    return pandora
+    authed = pandora.authenticate(Prefs['pan_user'], Prefs['pan_pass'])
+    if authed:
+        return pandora
+    else:
+        return None
 
 ####################################################################################################
-def StationList():
+def StationList(action='play'):
     
     pandora = PandoraObject()
-    
+    if pandora is None:
+        return ObjectContainer(header="Pandora Error",
+                 message="Unable to log in.  Please check your settings.  The Pandora channel requires a paid Pandora One account."
+               )
+
     oc = ObjectContainer(no_cache=True)
-    
     stations = pandora.get_station_list()
-    
+
+    if Prefs['station_sort_order'] == 'Alphabetical':
+        stations = sorted(stations, key=lambda k: k['stationName'])
+
     for station in stations:
-        oc.add(DirectoryObject(key=Callback(Station, station=station), title = station['stationName']))
+        if action == 'play':
+            oc.add(DirectoryObject(key=Callback(Station, station=station), title = station['stationName']))
+        elif action == 'delete':
+            oc.add(PopupDirectoryObject(key=Callback(ConfirmDelete, station=station, station_name=station['stationName']), title = station['stationName']))
     
     return oc
 
 ####################################################################################################
+def ManageStations():
+    
+    oc = ObjectContainer()
+
+    oc.add(InputDirectoryObject(key=Callback(SearchStations), title="Add Station...", prompt="Search Pandora"))
+    oc.add(DirectoryObject(key=Callback(StationList, action='delete'), title="Remove Stations"))
+    
+    return oc
+
+####################################################################################################
+def SearchStations(query):
+    
+    pandora = PandoraObject()
+    results = pandora.music_search(query)
+    matches = results['artists'] + results['songs']
+
+    oc = ObjectContainer()
+    for match in matches:
+        title = match['artistName']
+        try:
+            title = title + ' - ' + match['songName']
+        except:
+            pass
+
+        oc.add(DirectoryObject(key=Callback(CreateStation, music_token=match['musicToken']), title=title))
+
+    return oc
+
+####################################################################################################
+def CreateStation(music_token):
+
+    pandora = PandoraObject()
+    pandora.create_station(music_token)
+    
+    return StationList(action='play')
+
+####################################################################################################
+def ConfirmDelete(station, station_name):
+    
+    oc = ObjectContainer()
+    oc.add(DirectoryObject(key=Callback(DeleteStation, station=station), title='Delete ' + station_name))
+    oc.add(DirectoryObject(key=Callback(StationList, action='delete'), title='Cancel'))
+    
+    return oc
+
+####################################################################################################
+def DeleteStation(station):
+    
+    pandora = PandoraObject()
+    pandora.delete_station(station['stationToken'])
+
+    return StationList(action='delete')
+
+####################################################################################################
 def Station(station=None, station_id=None):
-    if station:
-        title2 = station['stationName']
-        station_id = station['stationToken']
-    else:
-        title2=station_id
+    
+    title2 = station['stationName']
+    station_id = station['stationToken']
     oc = ObjectContainer(title2=title2, no_cache=True)
     pandora = PandoraObject()
-    pandora.switch_station(station_id)
+    playlist_stale = False
+
+    if Dict['PandoraPlaylist']['timestamp'] + PLAYLIST_RESET_INTERVAL < int(Datetime.TimestampFromDatetime(Datetime.Now())):
+        playlist_stale = True
     
-    while len(oc) < int(Prefs['playlist_length']):
+    if Dict['PandoraPlaylist']['station_id'] != station_id or playlist_stale:
         try:
-            song = pandora.get_next_song()
-            try:
-                if song['adToken']:
-                    song = pandora.get_next_song()
-            except:
-                pass
-            
-            track = GetTrack(song)
-            oc.add(track)
-        
+            pandora.switch_station(station_id)
+            Dict['PandoraPlaylist']['station_id'] = station_id
+            Dict['PandoraPlaylist']['timestamp'] = int(Datetime.TimestampFromDatetime(Datetime.Now()))
+            Dict['PandoraPlaylist']['playlist'] = []
         except:
-            break            
-    
+            return ObjectContainer(header="Pandora Error",
+                     message="Unable to switch station.  Hourly limit reached.  Try again in a few minutes."
+                   )
+    else:
+        pandora.set_station(station_id)    
+        
+    while len(Dict['PandoraPlaylist']['playlist']) < PLAYLIST_LENGTH:
+        try:
+            Dict['PandoraPlaylist']['playlist'].append(pandora.get_next_song())
+            Dict['PandoraPlaylist']['timestamp'] = int(Datetime.TimestampFromDatetime(Datetime.Now()))
+        except:
+            Log('Unable to add track.')
+            break
+
+    for song in Dict['PandoraPlaylist']['playlist']:
+        track = GetTrack(song)
+        oc.add(track)
+
     return oc
 
 ####################################################################################################
 def GetTrack(song):
-    
+
+    items = []
+    for quality in song['audioUrlMap']:
+        
+        encoding = song['audioUrlMap'][quality]['encoding']
+        if 'aac' in encoding:
+            container = Container.MP4
+            audio_codec = AudioCodec.AAC
+            ext = 'aac'
+        else:
+            container = Container.MP3
+            audio_codec = AudioCodec.MP3
+            ext = 'mp3'
+        items.append(MediaObject(
+            parts = [PartObject(key=Callback(PlayAudio, url=song['audioUrlMap'][quality]['audioUrl'], ext=ext, quality=quality, song=song))],
+            container = container,
+            bitrate = song['audioUrlMap'][quality]['bitrate'],
+            audio_codec = audio_codec,
+            audio_channels = 2
+        ))
+        
     track = TrackObject(
-        key=song['songDetailUrl'],
+        key=Callback(GetTrack, song=song),
         rating_key=song['songDetailUrl'],
         title = song['songName'],
         album=song['albumName'],
         artist = song['artistName'],
         thumb = song['albumArtUrl'],
-        items = [
-            MediaObject(
-                parts = [PartObject(key=Callback(PlayAudio, song=song, ext='mp3', quality='mp3'))],
-                container = Container.MP3,
-                bitrate = 128,
-                audio_codec = AudioCodec.MP3,
-                audio_channels = 2
-            ),
-            MediaObject(
-                parts = [PartObject(key=Callback(PlayAudio, song=song, ext='aac', quality='highQuality'))],
-                container = Container.MP4,
-                bitrate = 64,
-                audio_codec = AudioCodec.AAC,
-                audio_channels = 2
-            ),
-            MediaObject(
-                parts = [PartObject(key=Callback(PlayAudio, song=song, ext='aac', quality='mediumQuality'))],
-                container = Container.MP4,
-                bitrate = 64,
-                audio_codec = AudioCodec.AAC,
-                audio_channels = 2
-            ),
-            MediaObject(
-                parts = [PartObject(key=Callback(PlayAudio, song=song, ext='aac', quality='lowQuality'))],
-                container = Container.MP4,
-                bitrate = 32,
-                audio_codec = AudioCodec.AAC,
-                audio_channels = 2
-            )
-        ]
+        items = items
     )
     return track
 
 ####################################################################################################
-def PlayAudio(song, quality):
-    QUALITY_MAP = ['lowQuality', 'mediumQuality', 'highQuality']
-    
-    if quality == 'mp3':
-        return Redirect(song['additionalAudioUrl'])
-    
-    index = QUALITY_MAP.index(quality)
-    while index > -1:
-        try:
-            song_url = song['audioUrlMap'][QUALITY_MAP[index]]['audioUrl']
-            break
-        except:
-            index = index - 1
-    return Redirect(song_url)
+def PlayAudio(url='', ext='', quality='', song=None):
+    try:
+        Dict['PandoraPlaylist']['playlist'].remove(song)
+    except:
+        pass
+    return Redirect(url)
 
 ####################################################################################################
