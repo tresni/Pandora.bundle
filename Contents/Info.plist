@@ -14,5 +14,9 @@
 	<array>
 		<string>NoURLServices</string>
 	</array>
+	<key>PlexPluginRegions</key>
+	<array>
+		<string>US</string>
+	</array>
 </dict>
 </plist>
