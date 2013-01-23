@@ -2,7 +2,7 @@ from pandora import Pandora
 
 NAMESPACES = {'pandora':'http://www.pandora.com/rss/1.0/modules/pandora/'}
 ART = 'art-default.jpg'
-ICON = 'icon-default.jpg'
+ICON = 'icon-default.png'
 ICON_PREFS = 'icon-prefs.png'
 ICON_SEARCH = 'icon-search.png'
 
