@@ -55,6 +55,7 @@ def PandoraObject():
         return None
 
 ####################################################################################################
+@route('/music/pandora/stations')
 def StationList(action='play'):
     
     pandora = PandoraObject()
@@ -71,6 +72,7 @@ def StationList(action='play'):
 
     for station in stations:
         if action == 'play':
+            #oc.add(DirectoryObject(key=Callback(Station, station=String.Encode(JSON.StringFromObject(station))), title = station['stationName']))
             oc.add(DirectoryObject(key=Callback(Station, station=station), title = station['stationName']))
         elif action == 'delete':
             oc.add(PopupDirectoryObject(key=Callback(ConfirmDelete, station=station, station_name=station['stationName']), title = station['stationName']))
@@ -78,6 +80,7 @@ def StationList(action='play'):
     return oc
 
 ####################################################################################################
+@route('/music/pandora/manage')
 def ManageStations():
     
     oc = ObjectContainer()
@@ -88,6 +91,7 @@ def ManageStations():
     return oc
 
 ####################################################################################################
+@route('/music/pandora/search')
 def SearchStations(query):
     
     pandora = PandoraObject()
@@ -107,6 +111,7 @@ def SearchStations(query):
     return oc
 
 ####################################################################################################
+@route('/music/pandora/create/{token}')
 def CreateStation(music_token):
 
     pandora = PandoraObject()
@@ -124,6 +129,7 @@ def ConfirmDelete(station, station_name):
     return oc
 
 ####################################################################################################
+@route('/music/pandora/delete')
 def DeleteStation(station):
     
     pandora = PandoraObject()
@@ -132,8 +138,9 @@ def DeleteStation(station):
     return StationList(action='delete')
 
 ####################################################################################################
+@route('/music/pandora/station/{station}',station=dict)
 def Station(station=None, station_id=None):
-    
+    #station = JSON.ObjectFromString(String.Decode(station))
     title2 = station['stationName']
     station_id = station['stationToken']
     oc = ObjectContainer(title2=title2, no_cache=True)
@@ -171,11 +178,12 @@ def Station(station=None, station_id=None):
     return oc
 
 ####################################################################################################
+@route('/music/pandora/track/{song}',song=dict)
 def GetTrack(song):
 
     items = []
+
     for quality in song['audioUrlMap']:
-        
         encoding = song['audioUrlMap'][quality]['encoding']
         if 'aac' in encoding:
             container = Container.MP4
@@ -185,7 +193,7 @@ def GetTrack(song):
             container = Container.MP3
             audio_codec = AudioCodec.MP3
             ext = 'mp3'
-        items.append(MediaObject(
+        items.insert(0, MediaObject(
             parts = [PartObject(key=Callback(PlayAudio, url=song['audioUrlMap'][quality]['audioUrl'], ext=ext, quality=quality, song=song))],
             container = container,
             bitrate = song['audioUrlMap'][quality]['bitrate'],
@@ -205,6 +213,7 @@ def GetTrack(song):
     return track
 
 ####################################################################################################
+@route('/music/pandora/play/{song}',song=dict)
 def PlayAudio(url='', ext='', quality='', song=None):
     try:
         Dict['PandoraPlaylist']['playlist'].remove(song)
