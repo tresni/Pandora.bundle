@@ -55,6 +55,7 @@ def PandoraObject():
         return None
 
 ####################################################################################################
+@route('/music/pandora/stations')
 def StationList(action='play'):
     
     pandora = PandoraObject()
@@ -78,6 +79,7 @@ def StationList(action='play'):
     return oc
 
 ####################################################################################################
+@route('/music/pandora/manage')
 def ManageStations():
     
     oc = ObjectContainer()
@@ -88,6 +90,7 @@ def ManageStations():
     return oc
 
 ####################################################################################################
+@route('/music/pandora/search')
 def SearchStations(query):
     
     pandora = PandoraObject()
@@ -107,6 +110,7 @@ def SearchStations(query):
     return oc
 
 ####################################################################################################
+@route('/music/pandora/create')
 def CreateStation(music_token):
 
     pandora = PandoraObject()
@@ -115,6 +119,7 @@ def CreateStation(music_token):
     return StationList(action='play')
 
 ####################################################################################################
+@route('/music/pandora/confirmdelete', station=dict, station_name=str)
 def ConfirmDelete(station, station_name):
     
     oc = ObjectContainer()
@@ -124,6 +129,7 @@ def ConfirmDelete(station, station_name):
     return oc
 
 ####################################################################################################
+@route('/music/pandora/delete', station=dict)
 def DeleteStation(station):
     
     pandora = PandoraObject()
@@ -132,8 +138,8 @@ def DeleteStation(station):
     return StationList(action='delete')
 
 ####################################################################################################
+@route('/music/pandora/station',station=dict,station_id=str)
 def Station(station=None, station_id=None):
-    
     title2 = station['stationName']
     station_id = station['stationToken']
     oc = ObjectContainer(title2=title2, no_cache=True)
@@ -171,11 +177,12 @@ def Station(station=None, station_id=None):
     return oc
 
 ####################################################################################################
+@route('/music/pandora/track',song=dict)
 def GetTrack(song):
 
     items = []
+
     for quality in song['audioUrlMap']:
-        
         encoding = song['audioUrlMap'][quality]['encoding']
         if 'aac' in encoding:
             container = Container.MP4
@@ -185,7 +192,7 @@ def GetTrack(song):
             container = Container.MP3
             audio_codec = AudioCodec.MP3
             ext = 'mp3'
-        items.append(MediaObject(
+        items.insert(0, MediaObject(
             parts = [PartObject(key=Callback(PlayAudio, url=song['audioUrlMap'][quality]['audioUrl'], ext=ext, quality=quality, song=song))],
             container = container,
             bitrate = song['audioUrlMap'][quality]['bitrate'],
