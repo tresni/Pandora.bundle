@@ -179,27 +179,17 @@ def Station(station=None, station_id=None):
 ####################################################################################################
 @route('/music/pandora/track',song=dict)
 def GetTrack(song):
-
     items = []
 
-    for quality in song['audioUrlMap']:
-        encoding = song['audioUrlMap'][quality]['encoding']
-        if 'aac' in encoding:
-            container = Container.MP4
-            audio_codec = AudioCodec.AAC
-            ext = 'aac'
-        else:
-            container = Container.MP3
-            audio_codec = AudioCodec.MP3
-            ext = 'mp3'
-        items.insert(0, MediaObject(
-            parts = [PartObject(key=Callback(PlayAudio, url=song['audioUrlMap'][quality]['audioUrl'], ext=ext, quality=quality, song=song))],
-            container = container,
-            bitrate = song['audioUrlMap'][quality]['bitrate'],
-            audio_codec = audio_codec,
-            audio_channels = 2
-        ))
-        
+    if 'highQuality' in song['audioUrlMap']:
+        items.append(CreateMediaObject(song['audioUrlMap']['highQuality'], 'highQuality', song['trackToken']))
+    if 'mediumQuality' in song['audioUrlMap']:
+        items.append(CreateMediaObject(song['audioUrlMap']['mediumQuality'], 'mediumQuality', song['trackToken']))
+    if 'lowQuality' in song['audioUrlMap']:
+        items.append(CreateMediaObject(song['audioUrlMap']['lowQuality'], 'lowQuality', song['trackToken']))
+    if len(items) == 0:
+        return None
+    
     track = TrackObject(
         key=Callback(GetTrack, song=song),
         rating_key=song['songDetailUrl'],
@@ -212,9 +202,45 @@ def GetTrack(song):
     return track
 
 ####################################################################################################
-def PlayAudio(url='', ext='', quality='', song=None):
+def CreateMediaObject(track, quality, token):
+    if 'aac' in track['encoding']:
+        container = Container.MP4
+        audio_codec = AudioCodec.AAC
+        ext = 'aac'
+    else:
+        container = Container.MP3
+        audio_codec = AudioCodec.MP3
+        ext = 'mp3'
+
+    return MediaObject(
+        parts = [
+            PartObject(
+                key = Callback(
+                    PlayAudio,
+                    url=track['audioUrl'],
+                    ext=ext,
+                    quality=quality,
+                    trackToken=token
+                    ),
+                )
+            ],
+        container = container,
+        bitrate = track['bitrate'],
+        audio_codec = audio_codec,
+        audio_channels = 2,
+        )
+
+####################################################################################################
+def FindSongByTrackToken(token):
+    for song in Dict['PandoraPlaylist']['playlist']:
+        if song['trackToken'] == token:
+            return song
+    return None
+
+####################################################################################################
+def PlayAudio(url='', ext='', quality='', trackToken=None):
     try:
-        Dict['PandoraPlaylist']['playlist'].remove(song)
+        Dict['PandoraPlaylist']['playlist'].remove(FindSongByTrackToken(trackToken))
     except:
         pass
     return Redirect(url)
