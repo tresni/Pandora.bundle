@@ -61,7 +61,7 @@ def StationList(action='play'):
     pandora = PandoraObject()
     if pandora is None:
         return ObjectContainer(header="Pandora Error",
-                 message="Unable to log in.  Please check your settings.  The Pandora channel requires a paid Pandora One account."
+                 message="Unable to log in.  Please check your settings."
                )
 
     oc = ObjectContainer(no_cache=True)

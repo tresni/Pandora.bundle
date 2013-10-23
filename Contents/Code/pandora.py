@@ -32,12 +32,17 @@ class Pandora(object):
 		if not self.authenticated: raise ValueError("User not yet authenticated")
 		if not self.station_id: raise ValueError("No station selected")
 		
-		# get more songs
-		if len(self.backlog) < 2:
-			self.backlog = self.connection.get_fragment(self.station_id) + self.backlog
-		
-		# get next song
-		return self.backlog.pop()
+		while True:
+			# get more songs
+			if len(self.backlog) < 2:
+				self.backlog = self.connection.get_fragment(self.station_id) + self.backlog
+			
+			# get next song
+			next = self.backlog.pop()
+			if 'adToken' in next:
+				continue
+			else:
+				return next
 
 	def music_search(self, query):
 		return self.connection.music_search(query)

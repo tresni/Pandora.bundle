@@ -15,12 +15,19 @@ class PandoraConnection(object):
 	time_offset = 0
 	
 	PROTOCOL_VERSION = 'NQ__'
-	RPC_URL = 'Oi8vaW50ZXJuYWwtdHVuZXIucGFuZG9yYS5jb20vc2VydmljZXMvanNvbi8@'
-	DEVICE_MODEL = 'RDAx'
-	PARTNER_USERNAME = 'cGFuZG9yYSBvbmU_'
-	PARTNER_PASSWORD = 'VFZDS0lCR1M5QU85VFNZTE5ORlVNTDA3NDNMSDgyRA__'
-	ENCRYPT_KEY = 'MiUzV0NMKkpVJE1QXTQ_'
-	DECRYPT_KEY = 'VSNJTyRSWlBBQiVWWDI_'
+	#RPC_URL = 'Oi8vaW50ZXJuYWwtdHVuZXIucGFuZG9yYS5jb20vc2VydmljZXMvanNvbi8@'
+	#DEVICE_MODEL = 'RDAx'
+	#PARTNER_USERNAME = 'cGFuZG9yYSBvbmU_'
+	#PARTNER_PASSWORD = 'VFZDS0lCR1M5QU85VFNZTE5ORlVNTDA3NDNMSDgyRA__'
+	#ENCRYPT_KEY = 'MiUzV0NMKkpVJE1QXTQ_'
+	#DECRYPT_KEY = 'VSNJTyRSWlBBQiVWWDI_'
+
+	RPC_URL = 'Oi8vdHVuZXIucGFuZG9yYS5jb20vc2VydmljZXMvanNvbi8@'
+	DEVICE_MODEL = 'YW5kcm9pZC1nZW5lcmlj'
+	PARTNER_USERNAME = 'YW5kcm9pZA__'
+	PARTNER_PASSWORD = 'QUM3SUJHMDlBM0RUU1lNNFI0MVVKV0wwN1ZMTjhKSTc_'
+	ENCRYPT_KEY = 'NiMyNkZSTCRaV0Q_'
+	DECRYPT_KEY = 'Uj1VIUxIJE8yQiM_'	
 
 	def __init__(self):
 		pass
@@ -53,7 +60,7 @@ class PandoraConnection(object):
 		except:
 			pass
 		
-		if self.partner_auth_token is not None and self.user_auth_token is not None and self.premium_account:
+		if self.partner_auth_token is not None and self.user_auth_token is not None:
 			return True
 		else:
 			return False
